@@ -17,9 +17,10 @@ using namespace std;
 //----------Agent Setup----------//
 class agent {
 public:
-	int state = 3;
-	int startstate = 3;
+	int state;
+	int startstate;
 
+	void init();
 	void update(int newstate);
 	void reset();
 };
@@ -29,6 +30,14 @@ void agent::update(int newstate) {
 }
 
 void agent::reset() {
+	state = startstate;
+}
+
+void agent::init() {
+	startstate = rand() % 6;
+	while (startstate == 5) {
+		startstate = rand() % 5; //make sure agent does not initialize outside of the house
+	}
 	state = startstate;
 }
 //----------End Agent Setup----------//
@@ -139,8 +148,9 @@ int main() {
 	qlearner q;
 	q.init(nroom);
 	agent a;
+	a.init();
 
-	int stat_run = 30;
+	int stat_run = 300;
 	int sim = 1000;
 	bool goalfound = false;
 	int time[1000];
@@ -150,6 +160,8 @@ int main() {
 
 	for (int i = 0; i < stat_run; i++) {
 		for (int j = 0; j < sim; j++) {
+			a.reset();
+			goalfound = false;
 			while (!goalfound) {
 				int select = q.decide(a.state, nroom);
 				a.update(select);
