@@ -2,6 +2,7 @@
 //ME 493 - Autonomy
 //Final Project
 //Q-learner that learns how to exit a house no matter which room you place it in
+//Requires rtable.csv
 
 #include <iostream>
 #include <vector>
