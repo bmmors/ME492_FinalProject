@@ -10,6 +10,10 @@
 #include <random>
 #include <cmath>
 #include <fstream>
+#include <string>
+#include <iterator>
+#include <sstream>
+#include <algorithm>
 
 using namespace std;
 #define BMMRAND (double)rand()/RAND_MAX
@@ -20,7 +24,7 @@ public:
 	int state;
 	int startstate;
 
-	void init();
+	void init(int nroom);
 	void update(int newstate);
 	void reset();
 };
@@ -33,10 +37,10 @@ void agent::reset() {
 	state = startstate;
 }
 
-void agent::init() {
-	startstate = rand() % 6;
-	while (startstate == 5) {
-		startstate = rand() % 5; //make sure agent does not initialize outside of the house
+void agent::init(int nroom) {
+	startstate = rand() % nroom;
+	while (startstate == nroom) {
+		startstate = rand() % nroom; //make sure agent does not initialize outside of the house
 	}
 	state = startstate;
 }
@@ -55,36 +59,52 @@ public:
 	double gamma = 0.9;
 	int oldstate;
 
-	void init(int nroom);
+	void init_qtable(int nroom);
+	void init_rtable(int nroom);
 	int decide(int state,int nroom);
 	void react(int newstate,int nroom);
 };
 
-void qlearner::init(int nroom) {
+void qlearner::init_rtable(int nroom) {
 	for (int i = 0; i < nroom; i++) {
-		vector<int> temp;
+		vector<int> tp;
 		for (int j = 0; j < nroom; j++) {
-			temp.push_back(0);
+			tp.push_back(0);
 		}
-		assert(temp.size() == nroom);
-		rtable.push_back(temp);
+		assert(tp.size() == nroom);
+		rtable.push_back(tp);
 	}
+	string::size_type sz;
+	ifstream infile("rtable.csv");
+	string temp;
+	for(int i = 0; i < nroom; i++) {
+		for (int iterator = 0; iterator < nroom; iterator++) {
+			if (iterator < nroom-1) {
+				getline(infile, temp, ',');
+				//cout << temp << endl;
+			}
+			else {
+				getline(infile, temp, '\n');
+				//cout << temp << endl;
+			}
+			rtable[iterator][i] = stoi(temp, &sz);
+		}
+	}
+	assert(rtable.size() == nroom);
 
-	rtable[0][4] = -1;
-	rtable[1][3] = -1;
-	rtable[2][3] = -1;
-	rtable[3][1] = -1;
-	rtable[3][2] = -1;
-	rtable[3][4] = -1;
-	rtable[4][0] = -1;
-	rtable[4][3] = -1;
-	rtable[5][1] = -1;
-	rtable[5][4] = -1;
 
-	rtable[1][5] = 100;
-	rtable[4][5] = 100;
-	rtable[5][5] = 100;
+	for (int i = 0; i < nroom; i++) {
+		for (int j = 0; j < nroom; j++) {
+			cout << rtable.at(i).at(j) << "\t";
+		}
+		cout << endl;
+	}
+	
 
+
+}
+
+void qlearner::init_qtable(int nroom) {
 	for (int i = 0; i < nroom; i++) {
 		vector<double> t;
 		for (int j = 0; j < nroom; j++) {
@@ -98,6 +118,14 @@ void qlearner::init(int nroom) {
 		assert(t.size() == nroom);
 		qtable.push_back(t);
 	}
+
+	/*for (int i = 0; i < nroom; i++) {
+		for (int j = 0; j < nroom; j++) {
+			cout << qtable.at(i).at(j) << "\t";
+		}
+		cout << endl;
+	}
+	*/
 }
 
 int qlearner::decide(int state,int nroom) {
@@ -108,9 +136,9 @@ int qlearner::decide(int state,int nroom) {
 	double rand1 = BMMRAND;
 	if (rand1 <= e) {
 		//exploratory
-		newstate = rand() % 6;
+		newstate = rand() % nroom;
 		while (rtable[state][newstate] == 0) {
-			newstate = rand() % 6;
+			newstate = rand() % nroom;
 		}
 		qval = qtable[state][newstate];
 	}
@@ -123,7 +151,9 @@ int qlearner::decide(int state,int nroom) {
 				newstate = i;
 			}
 		}
+		//cout << "state:" << state << "\tnewstate:" << newstate << endl;
 		qval = qtable[state][newstate];
+		//cout << "qval:" << qval << endl;
 	}
 	return  newstate;
 }
@@ -144,13 +174,15 @@ void qlearner::react(int newstate, int nroom) {
 //----------End Q-Learner Setup----------//
 
 int main() {
-	int nroom = 6;
+	int nroom = 13;
 	qlearner q;
-	q.init(nroom);
+	q.init_rtable(nroom);
+	q.init_qtable(nroom);
 	agent a;
-	a.init();
+	a.init(nroom);
 
-	int stat_run = 300;
+	
+	int stat_run = 30;
 	int sim = 1000;
 	bool goalfound = false;
 	int time[1000];
@@ -174,7 +206,7 @@ int main() {
 			}
 		}
 		q.qtable.clear();
-		q.init(nroom);
+		q.init_qtable(nroom);
 	}
 
 	ofstream myfile;
@@ -184,5 +216,7 @@ int main() {
 		myfile << time[i] << endl;
 	}
 	myfile.close();
+	
+	
 }
 
